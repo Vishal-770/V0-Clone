@@ -49,3 +49,13 @@ export async function FetchComponents(id: number) {
     throw new Error(`Error Fetching Components ${error.message}`);
   } else return data;
 }
+
+export async function DeleteComponent(componentId: string): Promise<void> {
+  const { error } = await supabase
+    .from("Components")
+    .delete()
+    .eq("componentId", componentId);
+  if (error) {
+    throw new Error("Failed Deleting Component");
+  }
+}

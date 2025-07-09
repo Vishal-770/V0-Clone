@@ -1,42 +1,28 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  CreateNewComponent,
-  FetchComponents,
-  FetchUserDetails,
-} from "@/service/service";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { FetchComponents, FetchUserDetails } from "@/service/service";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { useForm } from "react-hook-form";
+
+import { useQuery } from "@tanstack/react-query";
+
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import CreateComponentDialog from "./CreateComponentDialog";
+import DeleteComponentDialog from "./DeleteComponentDialog";
 
 interface DashBoardProps {
   email?: string;
 }
 
-interface FormData {
-  name: string;
-}
-
 const DashBoard: React.FC<DashBoardProps> = ({ email }) => {
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormData>();
+  const [selectedComponentId, setSelectedComponentId] = useState<string | null>(
+    null
+  );
 
   const {
     data: userData,
@@ -63,98 +49,121 @@ const DashBoard: React.FC<DashBoardProps> = ({ email }) => {
     enabled: !!userData,
   });
 
-  const createComponentMutation = useMutation({
-    mutationFn: (name: string) =>
-      CreateNewComponent({
-        name,
-        id: userData?.id,
-      }),
-    onSuccess: () => {
-      setDialogOpen(false);
-      toast.success("Created New Component Successfully");
-      reset(); // clear form
-      refetch(); // refresh list
-    },
-    onError: () => {
-      toast.error("Error Creating New Component");
-    },
-  });
+  if (!email) {
+    return (
+      <Alert className="w-full max-w-4xl mx-auto my-8">
+        <Terminal className="h-4 w-4" />
+        <AlertTitle>No account detected</AlertTitle>
+        <AlertDescription>
+          Please sign in to access the dashboard.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
-  const onSubmit = (data: FormData) => {
-    if (!userData) return;
-    createComponentMutation.mutate(data.name);
-  };
+  if (isLoading || isLoadingComponents) {
+    return (
+      <div className="p-8 w-full max-w-4xl mx-auto space-y-6">
+        <Skeleton className="h-10 w-1/3 rounded" />
+        <div className="flex gap-4">
+          <Skeleton className="h-10 w-48 rounded" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  if (!email) return <h1>No account detected</h1>;
-  if (isLoading || isLoadingComponents) return <h1>Loading...</h1>;
-  if (isError || componentError)
-    return <h1>Error: {(error as Error).message}</h1>;
+  if (isError || componentError) {
+    return (
+      <Alert variant="destructive" className="w-full max-w-4xl mx-auto my-8">
+        <Terminal className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {(error as Error).message || "Failed to load data"}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-semibold mb-4">
-        Welcome, {userData?.username}!
-      </h1>
+    <div className="w-full h-full p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Welcome back, {userData?.username}!
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your components and create new ones
+            </p>
+          </div>
+          <CreateComponentDialog refetch={refetch} userData={userData} />
+        </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogTrigger asChild>
-          <Button className="cursor-pointer">Create New Component</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create a new component</DialogTitle>
-            <DialogDescription>
-              Enter a name for your new component below.
-            </DialogDescription>
-          </DialogHeader>
+        {/* Components */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold">Your Components</h2>
+            <Badge variant="outline" className="px-3 py-1">
+              {componentData?.length || 0} items
+            </Badge>
+          </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-2">
-            <Input
-              placeholder="Component name"
-              {...register("name", { required: true })}
-            />
-
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                type="submit"
-                className="cursor-pointer"
-                disabled={isSubmitting || createComponentMutation.isPending}
-              >
-                {createComponentMutation.isPending ? "Creating..." : "Create"}
-              </Button>
-              <Button
-                type="button"
-                className="cursor-pointer"
-                variant="destructive"
-                onClick={() => {
-                  setDialogOpen(false);
-                  reset();
-                }}
-                disabled={isSubmitting || createComponentMutation.isPending}
-              >
-                Cancel
-              </Button>
+          {componentData?.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">
+                You don&#39;t have any components yet. Create your first one!
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {componentData?.map((component, index) => (
+                <Card
+                  key={index}
+                  className="p-6 hover:shadow-md transition-shadow"
+                >
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-lg font-semibold">
+                        {component?.name}
+                      </h3>
+                      <Badge variant="secondary" className="ml-2">
+                        #{index + 1}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground font-mono break-all">
+                      {component?.componentId}
+                    </p>
+                    <div className="flex justify-end">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() =>
+                          setSelectedComponentId(component?.componentId)
+                        }
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Display all components */}
-      <div className="mt-6">
-        <h2 className="text-xl font-medium mb-2">Your Components:</h2>
-        {componentData?.length === 0 ? (
-          <p>No components found.</p>
-        ) : (
-          <ul className="space-y-2">
-            {componentData?.map((component, index) => (
-              <li key={index} className="border rounded-lg p-3 bg-gray-100">
-                <span className="font-medium">{component?.name}</span>
-                <h1>Component ID: {component?.componentId}</h1>
-              </li>
-            ))}
-          </ul>
-        )}
+          )}
+        </section>
       </div>
+
+      {/* Delete Dialog */}
+      <DeleteComponentDialog
+        setSelectedComponentId={setSelectedComponentId}
+        selectedComponentId={selectedComponentId}
+        refetch={refetch}
+      />
     </div>
   );
 };
