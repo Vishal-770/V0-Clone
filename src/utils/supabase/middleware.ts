@@ -33,7 +33,10 @@ export async function updateSession(request: NextRequest) {
 
   // ✅ Public routes
   const isPublicRoute =
-    pathname === "/" || pathname === "/login" || pathname.startsWith("/auth");
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api");
 
   // 🔒 Redirect unauthenticated users away from protected routes
   if (!user && !isPublicRoute) {
@@ -44,6 +47,3 @@ export async function updateSession(request: NextRequest) {
 
   return supabaseResponse;
 }
-
-
-

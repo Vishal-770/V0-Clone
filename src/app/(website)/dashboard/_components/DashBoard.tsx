@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import { FetchComponents, FetchUserDetails } from "@/service/service";
 
-import { Button } from "@/components/ui/button";
-
 import { useQuery } from "@tanstack/react-query";
 
 import { Card } from "@/components/ui/card";
@@ -14,6 +12,7 @@ import { Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import CreateComponentDialog from "./CreateComponentDialog";
 import DeleteComponentDialog from "./DeleteComponentDialog";
+import ComponentsList from "./ComponentsList";
 
 interface DashBoardProps {
   email?: string;
@@ -121,39 +120,12 @@ const DashBoard: React.FC<DashBoardProps> = ({ email }) => {
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {componentData?.map((component, index) => (
-                <Card
-                  key={index}
-                  className="p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <h3 className="text-lg font-semibold">
-                        {component?.name}
-                      </h3>
-                      <Badge variant="secondary" className="ml-2">
-                        #{index + 1}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground font-mono break-all">
-                      {component?.componentId}
-                    </p>
-                    <div className="flex justify-end">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() =>
-                          setSelectedComponentId(component?.componentId)
-                        }
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <ComponentsList
+              componentData={componentData ?? []}
+              setSelectedComponentId={(id?: string) =>
+                setSelectedComponentId(id ?? null)
+              }
+            />
           )}
         </section>
       </div>
